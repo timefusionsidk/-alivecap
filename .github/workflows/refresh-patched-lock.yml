@@ -1,0 +1,42 @@
+name: Refresh patched TanStack lockfile
+on:
+  push:
+    branches: [fix/vercel-deployment-readiness]
+    paths: [.github/workflows/refresh-patched-lock.yml]
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: fix/vercel-deployment-readiness
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .nvmrc
+      - run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify patched packages
+        run: |
+          node --input-type=module -e '
+          import fs from "node:fs";
+          const lock=JSON.parse(fs.readFileSync("package-lock.json","utf8"));
+          for(const [name,min] of [["@tanstack/react-start","1.168.60"],["@tanstack/start-server-core","1.169.39"]]){
+            const entries=Object.entries(lock.packages).filter(([p])=>p==="node_modules/"+name||p.endsWith("/node_modules/"+name));
+            if (!entries.length) throw Error("Missing "+name);
+            for(const [,p] of entries){
+              const a=p.version.split(".").map(Number), b=min.split(".").map(Number);
+              if(a[0]<b[0]||(a[0]===b[0]&&a[1]<b[1])||(a[0]===b[0]&&a[1]===b[1]&&a[2]<b[2])) throw Error("Vulnerable "+name+"@"+p.version);
+            }
+          }
+          '
+      - name: Commit repaired lockfile
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'fix: lock patched TanStack Start dependencies'
+            git push origin HEAD:fix/vercel-deployment-readiness
+          fi
