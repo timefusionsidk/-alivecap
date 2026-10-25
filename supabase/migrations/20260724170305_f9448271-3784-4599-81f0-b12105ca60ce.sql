@@ -1,0 +1,5 @@
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.has_role(uuid, public.app_role) from public, anon;
+revoke execute on function public.current_guest_id() from public;
+revoke execute on function public.update_updated_at_column() from public;

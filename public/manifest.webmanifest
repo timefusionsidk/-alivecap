@@ -1,0 +1,25 @@
+{
+  "name": "alivecap \u00e2\u20ac\u201d Live event camera",
+  "short_name": "alivecap",
+  "description": "The disposable camera for real life. Scan, shoot, and every photo lands in your event's shared gallery in real time.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f0e0c",
+  "theme_color": "#0f0e0c",
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
