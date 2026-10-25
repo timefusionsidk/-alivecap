@@ -6,7 +6,7 @@ AliveCap is a **TanStack Start SSR app** with Nitro server functions, Supabase A
 
 1. Connect `timefusionsidk/-alivecap` to the intended Vercel project. Check for duplicate projects (`alivecap`, `-alivecap`) before connecting a new one.
 2. Set the root directory to the repository root.
-3. Select the **TanStack Start** framework preset. This is also declared in `vercel.json`.
+3. Select the **TanStack Start (Lovable)** framework preset (`tanstack-start-lovable`), matching the existing Vercel project and `vercel.json`. This is also declared in `vercel.json`.
 4. Use `npm ci` (install) and `npm run build` (build). Do **not** override the output directory: Nitro creates the Vercel Build Output.
 5. Use Node.js **22.x** in Vercel Project Settings, consistent with `.nvmrc`.
 6. Connect the production branch only after the PR verification workflow passes. Use a preview deployment first.
@@ -38,6 +38,10 @@ In **Supabase Authentication → URL Configuration**, add the deployed site orig
 **Do not run every historical migration against a live project.** The repository already contains older test-data deletion statements. Before release, review and apply only the outstanding `supabase/migrations/20261024070000_protect_moderated_storage.sql` policy correction to the actual Supabase project if it has not been applied. Verify guest access to approved photos and denial for hidden/deleted photos.
 
 Never perform migrations solely because a Vercel build succeeded.
+
+## TanStack security requirement
+
+Vercel blocks vulnerable TanStack Start builds due to CVE-2026-102989. Never use `DANGEROUSLY_DEPLOY_VULNERABLE_TANSTACK_START_XSS`. The app must resolve `@tanstack/react-start` >= 1.168.60 and `@tanstack/start-server-core` >= 1.169.39; the build pipeline checks both versions. Regenerate and commit the lockfile whenever dependency versions change.
 
 ## Camera-upload limitation
 
