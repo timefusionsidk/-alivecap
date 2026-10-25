@@ -32,7 +32,7 @@ type GuestSession = {
 
 /** Public pre-join info. Reads only safe columns through a database function. */
 export const getEventPreview = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ slug: slugSchema }).parse(d))
+  .validator((d) => z.object({ slug: slugSchema }).parse(d))
   .handler(async ({ data }) => {
     const supabase = createPublicSupabase();
     const { data: rows } = await supabase.rpc("event_public_info", { _slug: data.slug });
@@ -62,7 +62,7 @@ export const getEventPreview = createServerFn({ method: "GET" })
  */
 export const joinEvent = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         slug: slugSchema,
@@ -90,7 +90,7 @@ export const joinEvent = createServerFn({ method: "POST" })
 /** The signed-in guest's own session (guest + event), or `{ ok: false }`. */
 export const getCurrentGuest = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ slug: slugSchema.optional() }).optional().parse(d))
+  .validator((d) => z.object({ slug: slugSchema.optional() }).optional().parse(d))
   .handler(async ({ data, context }) => {
     const { data: res } = await context.supabase.rpc("my_guest_session", {
       _slug: data?.slug ?? undefined,
@@ -102,7 +102,7 @@ export const getCurrentGuest = createServerFn({ method: "GET" })
 
 export const uploadGuestPhoto = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         slug: slugSchema,
