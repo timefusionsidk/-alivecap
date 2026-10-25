@@ -1,6 +1,11 @@
 name: Repair npm lockfile on fix branch
 
 on:
+  push:
+    branches:
+      - fix/vercel-deployment-readiness
+    paths:
+      - .github/workflows/repair-npm-lock.yml
   workflow_dispatch:
 
 permissions:
