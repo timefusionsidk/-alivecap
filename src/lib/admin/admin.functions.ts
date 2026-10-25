@@ -168,7 +168,7 @@ export const getHostOverview = createServerFn({ method: "GET" })
 // ---- Create event ----
 export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         name: z.string().trim().min(1, "Name is required").max(120),
@@ -227,7 +227,7 @@ export const createEvent = createServerFn({ method: "POST" })
 // ---- Get one event ----
 export const getEventDetail = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ id: uuid }).parse(d))
+  .validator((d) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     if (context.claims.is_anonymous) throw new Error("Host sign-in required");
     const { data: event, error } = await context.supabase
@@ -282,7 +282,7 @@ export const getEventDetail = createServerFn({ method: "GET" })
 // ---- Update settings ----
 export const updateEvent = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         id: uuid,
@@ -347,7 +347,7 @@ export const updateEvent = createServerFn({ method: "POST" })
 
 export const archiveEvent = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ id: uuid }).parse(d))
+  .validator((d) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     if (context.claims.is_anonymous) throw new Error("Host sign-in required");
     const { error } = await context.supabase
@@ -361,7 +361,7 @@ export const archiveEvent = createServerFn({ method: "POST" })
 // ---- Photos moderation ----
 export const listAdminPhotos = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         eventId: uuid,
@@ -445,7 +445,7 @@ export const listAdminPhotos = createServerFn({ method: "GET" })
 
 export const moderatePhotos = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         eventId: uuid,
@@ -514,7 +514,7 @@ export const moderatePhotos = createServerFn({ method: "POST" })
 // ---- Exports (ZIP download of all approved photos) ----
 export const listEventExports = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ eventId: uuid }).parse(d))
+  .validator((d) => z.object({ eventId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     if (context.claims.is_anonymous) throw new Error("Host sign-in required");
     const { data: ev } = await context.supabase
@@ -549,7 +549,7 @@ export const listEventExports = createServerFn({ method: "GET" })
 
 export const createEventExport = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ eventId: uuid }).parse(d))
+  .validator((d) => z.object({ eventId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     if (context.claims.is_anonymous) throw new Error("Host sign-in required");
     const { data: ev } = await context.supabase
