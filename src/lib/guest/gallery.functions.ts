@@ -17,7 +17,7 @@ const uuid = z.string().uuid();
  */
 export const listEventPhotos = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         slug: slugSchema,
@@ -130,7 +130,7 @@ export const listEventPhotos = createServerFn({ method: "GET" })
 
 export const toggleLike = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ photoId: uuid }).parse(d))
+  .validator((d) => z.object({ photoId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
     const { data: photo } = await supabase
@@ -166,7 +166,7 @@ export const toggleLike = createServerFn({ method: "POST" })
 
 export const listComments = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((d) => z.object({ photoId: uuid }).parse(d))
+  .validator((d) => z.object({ photoId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase;
     const { data: rows } = await supabase
@@ -196,7 +196,7 @@ export const listComments = createServerFn({ method: "GET" })
 
 export const addComment = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z.object({ photoId: uuid, body: z.string().trim().min(1).max(500) }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -226,7 +226,7 @@ export const addComment = createServerFn({ method: "POST" })
 /** POST prevents intermediary GET caching; RLS is checked before every byte read. */
 export const readGuestPhoto = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z.object({ photoId: uuid, thumbnail: z.boolean().default(false) }).parse(d),
   )
   .handler(async ({ data, context }) => {
