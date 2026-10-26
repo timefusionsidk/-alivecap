@@ -77,5 +77,4 @@ WITH CHECK (
   AND public.photo_is_visible(photo_id)
 );
 
-DELETE FROM public.photos WHERE storage_path IN ('p.jpg', 'q.jpg') OR storage_path LIKE '%/s.jpg';
-DELETE FROM public.guests WHERE name IN ('Curl Guest', 'Curl2', 'Curl3', 'Curl4', 'Upload Tester', 'Playwright Guest');
+-- No test-data cleanup in production migrations: preserve all user and guest records.
