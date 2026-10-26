@@ -16,18 +16,5 @@ CREATE POLICY "downloads no client insert" ON public.downloads
 CREATE POLICY "guest_sessions deny all" ON public.guest_sessions
   FOR ALL TO anon, authenticated USING (false) WITH CHECK (false);
 
--- 5) Storage.objects: explicit deny for anon/authenticated on our private buckets.
--- All access flows through service_role (bypasses RLS) via signed URLs / admin client.
-DO $$
-DECLARE b text;
-BEGIN
-  FOR b IN SELECT unnest(ARRAY['avatars','covers','photos','videos','thumbnails','exports','temporary'])
-  LOOP
-    EXECUTE format($f$
-      CREATE POLICY %I ON storage.objects
-        FOR ALL TO anon, authenticated
-        USING (bucket_id <> %L)
-        WITH CHECK (bucket_id <> %L);
-    $f$, 'deny_client_' || b, b, b);
-  END LOOP;
-END$$;
+-- Historical per-bucket permissive "deny" policies were unsafe (Postgres ORs permissive policies).
+-- Do not create them on new projects; the later scoped Storage policies enforce access.
