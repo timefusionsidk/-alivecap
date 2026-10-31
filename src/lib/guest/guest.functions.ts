@@ -121,43 +121,6 @@ export const uploadGuestPhoto = createServerFn({ method: "POST" })
     if (!session?.ok || !session.guest || !session.event) throw new Error("Unauthorized");
     if (!session.event.allow_uploads) throw new Error("Uploads are disabled");
 
-    const match = data.dataUrl.match(/^data:(image\/[a-z+.-]+);base64,(.+)$/i);
-    if (!match) throw new Error("Invalid image data");
-    const contentType = match[1].toLowerCase();
-    const bytes = Buffer.from(match[2], "base64");
-    if (bytes.length > 15 * 1024 * 1024) throw new Error("Photo exceeds 15MB");
-    const ext =
-      contentType === "image/jpeg"
-        ? "jpg"
-        : contentType === "image/webp"
-          ? "webp"
-          : contentType === "image/png"
-            ? "png"
-            : "bin";
-    const path = `${session.event.id}/${session.guest.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-
-    // RLS on storage.objects allows this write only inside the guest's own event folder.
-    const { error: upErr } = await context.supabase.storage
-      .from("photos")
-      .upload(path, bytes, { contentType, upsert: false });
-    if (upErr) throw new Error(upErr.message);
-
-    const { data: photo, error: perr } = await context.supabase
-      .from("photos")
-      .insert({
-        event_id: session.event.id,
-        guest_id: session.guest.id,
-        storage_path: path,
-        media_type: "photo",
-        filter_applied: data.filter ?? null,
-        width: data.width ?? null,
-        height: data.height ?? null,
-        size_bytes: bytes.length,
-        status: "approved",
-      })
-      .select("id, storage_path")
-      .single();
-    if (perr) throw new Error(perr.message);
-
-    return { ok: true as const, photo };
+    const { storeGuestPhoto } = await import("./upload-photo.server");
+    return storeGuestPhoto(context.supabase, { event: session.event, guest: session.guest }, data);
   });

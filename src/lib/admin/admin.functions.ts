@@ -350,12 +350,8 @@ export const archiveEvent = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     if (context.claims.is_anonymous) throw new Error("Host sign-in required");
-    const { error } = await context.supabase
-      .from("events")
-      .update({ deleted_at: new Date().toISOString(), status: "archived" })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true as const };
+    const { archiveOwnedEvent } = await import("./archive-event.server");
+    return archiveOwnedEvent(context.supabase, data.id);
   });
 
 // ---- Photos moderation ----
