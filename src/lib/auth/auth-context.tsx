@@ -23,10 +23,15 @@ export interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<AuthResult>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<AuthResult>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName?: string,
+    captchaToken?: string,
+  ) => Promise<AuthResult>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<AuthResult>;
+  resetPassword: (email: string, captchaToken?: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
   refreshSession: () => Promise<Session | null>;
 }
@@ -99,10 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [router, queryClient]);
 
-  const signIn = useCallback<AuthContextValue["signIn"]>(async (email, password) => {
+  const signIn = useCallback<AuthContextValue["signIn"]>(async (email, password, captchaToken) => {
     try {
       const { error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email: email.trim(), password }),
+        supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+          options: { captchaToken },
+        }),
       );
       if (error) return { ok: false, error: mapAuthError(error) };
       return { ok: true };
@@ -111,28 +120,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signUp = useCallback<AuthContextValue["signUp"]>(async (email, password, fullName) => {
-    try {
-      const { data, error } = await withTimeout(
-        supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: siteUrl("/auth/callback"),
-            data: fullName ? { full_name: fullName } : undefined,
-          },
-        }),
-      );
-      if (error) return { ok: false, error: mapAuthError(error) };
-      // Supabase returns an identities array of length 0 for an existing account.
-      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        return { ok: false, error: "An account with that email already exists. Try signing in instead." };
+  const signUp = useCallback<AuthContextValue["signUp"]>(
+    async (email, password, fullName, captchaToken) => {
+      try {
+        const { data, error } = await withTimeout(
+          supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              captchaToken,
+              emailRedirectTo: siteUrl("/auth/callback"),
+              data: fullName ? { full_name: fullName } : undefined,
+            },
+          }),
+        );
+        if (error) return { ok: false, error: mapAuthError(error) };
+        // Supabase returns an identities array of length 0 for an existing account.
+        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+          return {
+            ok: false,
+            error: "An account with that email already exists. Try signing in instead.",
+          };
+        }
+        return { ok: true, needsEmailVerification: !data.session };
+      } catch (e) {
+        return { ok: false, error: mapAuthError(e) };
       }
-      return { ok: true, needsEmailVerification: !data.session };
-    } catch (e) {
-      return { ok: false, error: mapAuthError(e) };
-    }
-  }, []);
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     // Order matters: stop in-flight protected queries before the session is cleared.
@@ -147,19 +163,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastUserId.current = null;
   }, [queryClient]);
 
-  const resetPassword = useCallback<AuthContextValue["resetPassword"]>(async (email) => {
-    try {
-      const { error } = await withTimeout(
-        supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: siteUrl("/auth/reset-password"),
-        }),
-      );
-      if (error) return { ok: false, error: mapAuthError(error) };
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: mapAuthError(e) };
-    }
-  }, []);
+  const resetPassword = useCallback<AuthContextValue["resetPassword"]>(
+    async (email, captchaToken) => {
+      try {
+        const { error } = await withTimeout(
+          supabase.auth.resetPasswordForEmail(email.trim(), {
+            captchaToken,
+            redirectTo: siteUrl("/auth/reset-password"),
+          }),
+        );
+        if (error) return { ok: false, error: mapAuthError(error) };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, error: mapAuthError(e) };
+      }
+    },
+    [],
+  );
 
   const updatePassword = useCallback<AuthContextValue["updatePassword"]>(async (password) => {
     try {

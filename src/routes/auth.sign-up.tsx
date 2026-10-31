@@ -1,3 +1,5 @@
+import { CaptchaChallenge } from "@/components/auth/captcha-challenge";
+import { useAuthCaptcha } from "@/lib/auth/use-auth-captcha";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,6 +48,7 @@ function SignUpPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const captcha = useAuthCaptcha();
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -57,12 +60,18 @@ function SignUpPage() {
   }, [loading, isAuthenticated, verifyEmail, navigate]);
 
   async function onSubmit(values: z.infer<typeof schema>) {
-    if (inFlight.current) return;
+    if (inFlight.current || !captcha.ready) return;
     inFlight.current = true;
     setSubmitting(true);
     setFormError(null);
-    const result = await signUp(values.email, values.password, values.name);
+    const result = await signUp(
+      values.email,
+      values.password,
+      values.name,
+      captcha.token ?? undefined,
+    );
     inFlight.current = false;
+    captcha.reset();
     setSubmitting(false);
     if (!result.ok) {
       setFormError(result.error);
@@ -175,6 +184,11 @@ function SignUpPage() {
             </p>
           )}
         </div>
+        <CaptchaChallenge
+          key={captcha.generation}
+          config={captcha.config}
+          onToken={captcha.setToken}
+        />
         {formError && (
           <div
             role="alert"
@@ -183,7 +197,7 @@ function SignUpPage() {
             {formError}
           </div>
         )}
-        <Button type="submit" className="w-full" disabled={busy}>
+        <Button type="submit" className="w-full" disabled={busy || !captcha.ready}>
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Create account
         </Button>
       </form>

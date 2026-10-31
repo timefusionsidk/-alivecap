@@ -1,3 +1,6 @@
+import { CaptchaChallenge } from "@/components/auth/captcha-challenge";
+import { useAuthCaptcha } from "@/lib/auth/use-auth-captcha";
+import { boundedRetrySeconds } from "@/lib/guest/rate-limit";
 import { Brand } from "@/components/brand";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -5,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Camera, Loader2, Lock, PartyPopper } from "lucide-react";
@@ -13,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getEventPreview, joinEvent } from "@/lib/guest/guest.functions";
-import { ensureGuestSession, getDeviceId } from "@/lib/guest/use-guest";
+import { ensureGuestSession, getDeviceId, useGuestSession } from "@/lib/guest/use-guest";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Please enter your name").max(80, "Name is too long"),
@@ -50,6 +53,21 @@ function JoinPage() {
   const join = useServerFn(joinEvent);
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
+  const captcha = useAuthCaptcha();
+  const { token: sessionUser, hydrated } = useGuestSession();
+  const needsCaptcha = hydrated && !sessionUser;
+  const [retryUntil, setRetryUntil] = useState(0);
+  const [now, setNow] = useState(Date.now);
+  const retrySeconds = Math.max(0, Math.ceil((retryUntil - now) / 1000));
+  useEffect(() => {
+    if (!retryUntil) return;
+    const timer = setInterval(() => {
+      const stamp = Date.now();
+      setNow(stamp);
+      if (stamp >= retryUntil) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [retryUntil]);
   const [fatal, setFatal] = useState<string | null>(null);
 
   const q = useQuery({
@@ -63,14 +81,13 @@ function JoinPage() {
   });
 
   async function onSubmit(values: z.infer<typeof schema>) {
-    if (inFlight.current) return; // guard against double submits
+    if (inFlight.current || Date.now() < retryUntil || (needsCaptcha && !captcha.ready)) return;
     inFlight.current = true;
     setSubmitting(true);
     setFatal(null);
-    console.log("Join Started");
     try {
       // Guests have no account: an anonymous session is what RLS authorises them with.
-      const uid = await ensureGuestSession();
+      const uid = await ensureGuestSession(captcha.token);
       if (!uid) {
         const msg = "Could not start a guest session. Please check your connection and try again.";
         toast.error(msg);
@@ -86,22 +103,25 @@ function JoinPage() {
         },
       });
       if (!res.ok) {
+        if (res.rateLimited) {
+          const stamp = Date.now();
+          setNow(stamp);
+          setRetryUntil(stamp + boundedRetrySeconds(res.retryAfterSeconds) * 1000);
+        }
         toast.error(res.error);
         setFatal(res.error);
         return;
       }
-      console.log("Join Successful");
       toast.success(`Welcome, ${res.guest.name}`);
-      console.log("Navigating to Camera");
       await navigate({ to: "/e/$slug/camera", params: { slug }, replace: true });
     } catch (e) {
       const msg = (e as Error)?.message ?? "Something went wrong. Please try again.";
-      console.error("Join failed", e);
       toast.error(msg);
       setFatal(msg);
     } finally {
       inFlight.current = false;
       setSubmitting(false);
+      captcha.reset();
     }
   }
 
@@ -183,11 +203,29 @@ function JoinPage() {
                 />
               </div>
             )}
-            {fatal && <p className="text-xs text-destructive">{fatal}</p>}
+            {needsCaptcha && (
+              <CaptchaChallenge
+                key={captcha.generation}
+                config={captcha.config}
+                onToken={captcha.setToken}
+              />
+            )}
+            {fatal && (
+              <p role="alert" className="text-xs text-destructive">
+                {fatal}
+              </p>
+            )}
+            {retrySeconds > 0 && (
+              <p role="status" className="text-xs text-muted-foreground">
+                Please wait {Math.ceil(retrySeconds / 60)} minute(s) before trying again.
+              </p>
+            )}
             <Button
               type="submit"
               className="h-12 w-full text-base"
-              disabled={submitting}
+              disabled={
+                submitting || !hydrated || retrySeconds > 0 || (needsCaptcha && !captcha.ready)
+              }
               aria-busy={submitting}
             >
               {submitting ? (

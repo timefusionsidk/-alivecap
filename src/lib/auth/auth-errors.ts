@@ -11,7 +11,12 @@ export function mapAuthError(error: unknown): string {
 
   if (!error) return "Something went wrong. Please try again.";
 
-  const err = error as Partial<AuthError> & { message?: string; status?: number; name?: string; code?: string };
+  const err = error as Partial<AuthError> & {
+    message?: string;
+    status?: number;
+    name?: string;
+    code?: string;
+  };
   const code = err.code ?? "";
   const message = (err.message ?? "").toLowerCase();
   const status = err.status;
@@ -24,11 +29,13 @@ export function mapAuthError(error: unknown): string {
   }
 
   const byCode: Record<string, string> = {
+    captcha_failed: "Verification expired or was rejected. Please complete it again.",
     invalid_credentials: "That email and password combination doesn't match an account.",
     email_not_confirmed: "Please verify your email address first — check your inbox for the link.",
     user_already_exists: "An account with that email already exists. Try signing in instead.",
     email_exists: "An account with that email already exists. Try signing in instead.",
-    weak_password: "That password is too weak. Use at least 8 characters with a mix of letters and numbers.",
+    weak_password:
+      "That password is too weak. Use at least 8 characters with a mix of letters and numbers.",
     over_request_rate_limit: "Too many attempts. Please wait a minute and try again.",
     over_email_send_rate_limit: "Too many attempts. Please wait a minute and try again.",
     same_password: "Your new password must be different from your current one.",
@@ -45,7 +52,11 @@ export function mapAuthError(error: unknown): string {
   if (message.includes("email not confirmed")) {
     return "Please verify your email address first — check your inbox for the link.";
   }
-  if (message.includes("already registered") || message.includes("already been registered") || message.includes("user already")) {
+  if (
+    message.includes("already registered") ||
+    message.includes("already been registered") ||
+    message.includes("user already")
+  ) {
     return "An account with that email already exists. Try signing in instead.";
   }
   if (message.includes("password should be") || message.includes("weak password")) {
@@ -54,7 +65,11 @@ export function mapAuthError(error: unknown): string {
   if (message.includes("rate limit") || status === 429) {
     return "Too many attempts. Please wait a minute and try again.";
   }
-  if (message.includes("expired") || message.includes("invalid token") || message.includes("token has expired")) {
+  if (
+    message.includes("expired") ||
+    message.includes("invalid token") ||
+    message.includes("token has expired")
+  ) {
     return "That link is invalid or has expired. Please request a new one.";
   }
   if (status && status >= 500) {

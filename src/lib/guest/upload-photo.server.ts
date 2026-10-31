@@ -1,3 +1,4 @@
+import { guestWriteRateLimitMessage } from "./rate-limit.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../integrations/supabase/types";
 
@@ -52,7 +53,10 @@ export async function storeGuestPhoto(
       })
       .select("id, storage_path")
       .single();
-    if (error || !photo) throw new Error(error?.message ?? "Could not register photo");
+    if (error || !photo)
+      throw new Error(
+        guestWriteRateLimitMessage(error, "upload") ?? error?.message ?? "Could not register photo",
+      );
     return { ok: true as const, photo };
   } catch (error) {
     // A quota rejection must not leave the normal camera flow's bytes behind.

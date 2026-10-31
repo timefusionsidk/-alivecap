@@ -16,6 +16,8 @@ type ThemeJson = Json;
 type GuestSession = {
   ok: boolean;
   error?: string;
+  error_code?: string;
+  retry_after_seconds?: number;
   guest?: { id: string; name: string };
   event?: {
     id: string;
@@ -79,10 +81,21 @@ export const joinEvent = createServerFn({ method: "POST" })
       _password: data.password ?? undefined,
       _device_id: data.deviceId ?? undefined,
     });
-    if (error) return { ok: false as const, error: "Could not join this event. Please try again." };
+    if (error)
+      return {
+        ok: false as const,
+        error: "Could not join this event. Please try again.",
+        rateLimited: false,
+        retryAfterSeconds: undefined,
+      };
     const payload = res as GuestSession;
     if (!payload?.ok) {
-      return { ok: false as const, error: payload?.error ?? "Could not join this event." };
+      return {
+        ok: false as const,
+        error: payload?.error ?? "Could not join this event.",
+        rateLimited: payload?.error_code === "rate_limited",
+        retryAfterSeconds: payload?.retry_after_seconds,
+      };
     }
     return { ok: true as const, guest: payload.guest!, event: payload.event! };
   });

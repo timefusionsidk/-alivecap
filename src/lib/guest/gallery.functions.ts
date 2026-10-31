@@ -1,3 +1,4 @@
+import { guestWriteRateLimitMessage } from "./rate-limit";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { Json } from "@/integrations/supabase/types";
@@ -219,7 +220,10 @@ export const addComment = createServerFn({ method: "POST" })
       .insert({ photo_id: data.photoId, guest_id: guestId, body: data.body })
       .select("id, body, created_at")
       .single();
-    if (error || !row) throw new Error("Comments are not available right now");
+    if (error || !row)
+      throw new Error(
+        guestWriteRateLimitMessage(error, "comment") ?? "Comments are not available right now",
+      );
     return { ok: true as const, comment: row };
   });
 
