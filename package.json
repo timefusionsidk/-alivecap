@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "test:security": "node --experimental-strip-types --test tests/security-a1-a3.test.mjs"
+    "test:security": "node --experimental-strip-types --test tests/security-*.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

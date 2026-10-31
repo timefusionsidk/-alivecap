@@ -1,3 +1,5 @@
+import { CaptchaChallenge } from "@/components/auth/captcha-challenge";
+import { useAuthCaptcha } from "@/lib/auth/use-auth-captcha";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +44,7 @@ function LoginPage() {
   const [google, setGoogle] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const captcha = useAuthCaptcha();
 
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -54,12 +57,13 @@ function LoginPage() {
   }, [loading, isAuthenticated, target, navigate]);
 
   async function onSubmit(values: z.infer<typeof schema>) {
-    if (inFlight.current) return;
+    if (inFlight.current || !captcha.ready) return;
     inFlight.current = true;
     setSubmitting(true);
     setFormError(null);
-    const result = await signIn(values.email, values.password);
+    const result = await signIn(values.email, values.password, captcha.token ?? undefined);
     inFlight.current = false;
+    captcha.reset();
     setSubmitting(false);
     if (!result.ok) {
       setFormError(result.error);
@@ -142,6 +146,11 @@ function LoginPage() {
             <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
           )}
         </div>
+        <CaptchaChallenge
+          key={captcha.generation}
+          config={captcha.config}
+          onToken={captcha.setToken}
+        />
         {formError && (
           <div
             role="alert"
@@ -150,7 +159,7 @@ function LoginPage() {
             {formError}
           </div>
         )}
-        <Button type="submit" className="w-full" disabled={busy}>
+        <Button type="submit" className="w-full" disabled={busy || !captcha.ready}>
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Sign in
         </Button>
       </form>

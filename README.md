@@ -556,3 +556,8 @@ Rules enforced in the codebase:
 Vercel setup: add every variable above (Production + Preview), keep the default
 build command (`vite build`) and install command. The build detects `VERCEL` and
 emits Nitro's Vercel Build Output, so no `vercel.json` is required.
+
+
+## Guest abuse controls and CAPTCHA
+
+See [A4 setup and migration notes](docs/security-a4.md) for join lockouts, upload/comment rate limits, Turnstile/hCaptcha activation, rollback SQL and staging verification. Deploy the matching frontend before enabling Supabase Auth CAPTCHA protection. Only the provider's public site key belongs in Vite environment variables; its secret belongs in Supabase Auth settings.

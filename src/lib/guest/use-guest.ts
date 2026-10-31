@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+import { ensureAnonymousSession } from "@/lib/auth/anonymous-session";
+import { readCaptchaConfig } from "@/lib/auth/captcha-config";
+
 const DEVICE_KEY = "alivecap.device_id";
 
 /**
@@ -25,12 +28,9 @@ export function getDeviceId(): string | null {
  * Guests have no account: they get an anonymous Supabase session, which is what
  * authorises every guest read/write through RLS. No privileged key involved.
  */
-export async function ensureGuestSession(): Promise<string | null> {
-  const { data } = await supabase.auth.getSession();
-  if (data.session?.user) return data.session.user.id;
-  const { data: anon, error } = await supabase.auth.signInAnonymously();
-  if (error) return null;
-  return anon.session?.user?.id ?? null;
+export async function ensureGuestSession(captchaToken?: string | null): Promise<string> {
+  const config = readCaptchaConfig();
+  return ensureAnonymousSession(supabase.auth, captchaToken, config.enabled);
 }
 
 /** Ends the guest's anonymous session (used by "Leave event"). */
@@ -53,12 +53,24 @@ export function useGuestSession(): { token: string | null; hydrated: boolean } {
   });
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
+    let changed = false;
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      setState({ token: data.session?.user?.id ?? null, hydrated: true });
+      changed = true;
+      setState({ token: session?.user?.id ?? null, hydrated: true });
     });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!active || changed) return;
+        setState({ token: data.session?.user?.id ?? null, hydrated: true });
+      })
+      .catch(() => {
+        if (active && !changed) setState({ token: null, hydrated: true });
+      });
     return () => {
       active = false;
+      listener.subscription.unsubscribe();
     };
   }, []);
   return state;

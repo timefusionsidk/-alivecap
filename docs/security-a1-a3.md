@@ -57,7 +57,7 @@ npx eslint src/lib/admin/archive-event.server.ts src/lib/guest/upload-photo.serv
 npm run build
 ```
 
-`npm test` runs 10 checks, including a SQL suite with many assertions. The suite replays all actual repository migrations on PGlite PostgreSQL 17.5 with platform Auth/Storage schema fixtures, then rolls back its data. Only unavailable pgcrypto extension creation is omitted; passwordless events are used. Auth/Storage HTTP services are not emulated.
+`npm test` runs 10 checks, including a SQL suite with many assertions. The suite replays all actual repository migrations on PGlite PostgreSQL 17.5 with platform Auth/Storage schema fixtures, then rolls back its data. The A4 follow-up now loads the bundled pgcrypto extension and reuses this suite unchanged; the original A1–A3 run used passwordless fixtures. Auth/Storage HTTP services are not emulated.
 
 `supabase/tests/a1_a3_security.sql` can also run on a disposable local Supabase stack with `psql -v ON_ERROR_STOP=1 -f supabase/tests/a1_a3_security.sql` after all migrations. It inserts metadata-only Storage fixtures and rolls everything back. Never use it against an active production project.
 
